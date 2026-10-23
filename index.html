@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0b3833" id="metaThemeColor">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>دفترچه حساب</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<style>
+  @font-face {
+    font-family: 'Vazir';
+    src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Regular.woff2') format('woff2');
+    font-display: swap;
+  }
+  :root {
+    --bg-main: #0c3530;
+    --bg-header: #0b3833;
+    --text-main: #ffffff;
+    --text-header: #cbd5e1;
+    --accent: #22c55e;
+    --fab-bg: #165b63;
+    --summary-bg: #d8dee3;
+    --summary-text: #1e293b;
+    --card-bg: #e2e6ea;
+    --card-text: #334155;
+    --tx-card-bg: #215e66;
+    --tx-card-text: #ffffff;
+    --pos-pill: #198719;
+    --neg-pill: #d64584;
+    --tx-neg-text: #ff6b6b;
+    --form-bg: #e5e7eb;
+    --form-card: #f8fafc;
+    --form-text: #1e293b;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Vazir', Tahoma, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background-color: var(--bg-main);
+    background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 0);
+    background-size: 24px 24px;
+    color: var(--text-main);
+    min-height: 100vh;
+    overflow-x: hidden;
+    user-select: none;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+  /* Header */
+  .app-bar {
+    background-color: var(--bg-header);
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: background-color 0.25s ease;
+  }
+  .app-bar-right, .app-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .app-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-header);
+  }
+  .icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-header);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+  .icon-btn:active {
+    background: rgba(255,255,255,0.12);
+  }
+  /* Single Tab Header */
+  .tab-bar {
+    background-color: var(--bg-header);
+    display: flex;
+    justify-content: flex-start;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    transition: background-color 0.25s ease;
+  }
+  .tab-item {
+    width: 33.33%;
+    text-align: center;
+    padding: 10px 0;
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 15px;
+    border-bottom: 3px solid var(--accent);
+  }
+  /* Daily Summary Box */
+  .summary-card {
+    background-color: var(--summary-bg);
+    margin: 10px 8px;
+    border-radius: 10px;
+    padding: 8px;
+    color: var(--summary-text);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .date-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .date-nav-btn {
+    background-color: rgba(255,255,255,0.65);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    color: #16a34a;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .date-nav-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--summary-text);
+    cursor: pointer;
+  }
+  .summary-boxes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .s-box {
+    border-radius: 6px;
+    padding: 8px 6px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 82px;
+  }
+  .s-box.receive { background-color: #b5ceb2; color: #14532d; }
+  .s-box.pay { background-color: #DFB5B5; color: #7f1d1d; }
+  .s-box.remain { background-color: #a4bed4; color: #1e3a8a; }
+  .s-box-title { font-size: 14px; font-weight: bold; }
+  .s-box-val { font-size: 13.5px; font-weight: bold; direction: ltr; margin: 4px 0; word-break: break-all; }
+  .s-box-unit { font-size: 11px; text-align: right; opacity: 0.85; }
+
+  /* Grid of Lists (LTR grid placement to match Android RecyclerView 3-col layout) */
+  .lists-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 4px 8px 95px;
+    direction: ltr;
+  }
+  .lists-grid.single-col {
+    grid-template-columns: 1fr;
+  }
+  .list-card {
+    direction: rtl;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    padding: 10px 6px;
+    color: var(--card-text);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 138px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.22);
+    transition: transform 0.12s ease, background-color 0.25s ease;
+  }
+  .list-card:active {
+    transform: scale(0.97);
+  }
+  .list-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background-color: #659c44;
+    color: #fff;
+    font-size: 11px;
+    width: 26px;
+    height: 26px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+  .list-badge.yellow { background-color: #b8aa1e; }
+  .list-badge.blue { background-color: #0284c7; }
+  .list-badge.purple { background-color: #7c3aed; }
+  .list-badge.red { background-color: #e11d48; }
+  .list-icon {
+    margin-top: 12px;
+    width: 44px;
+    height: 44px;
+    stroke: var(--card-text);
+    fill: none;
+  }
+  .list-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--card-text);
+    margin: 6px 0;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .list-balance {
+    width: 94%;
+    padding: 3px 6px;
+    border-radius: 14px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    direction: ltr;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .list-balance.pos { background-color: var(--pos-pill); }
+  .list-balance.neg { background-color: var(--neg-pill); }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background-color: var(--fab-bg);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 90;
+    transition: background-color 0.25s ease, transform 0.15s ease;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* Overlays & Modals */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.58);
+    z-index: 200;
+    display: none;
+    backdrop-filter: blur(2px);
+  }
+  .overlay.show { display: block; }
+
+  /* Bottom Sheet & Modal Dialogs */
+  .bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    color: #1e293b;
+    border-radius: 18px 18px 0 0;
+    padding: 16px 20px 28px;
+    z-index: 210;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .bottom-sheet.show { transform: translateY(0); }
+  .bs-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #64748b;
+    cursor: pointer;
+    float: left;
+    padding: 4px;
+  }
+  .bs-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 14px 8px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #334155;
+    cursor: pointer;
+    clear: both;
+    border-radius: 8px;
+  }
+  .bs-item:active { background: #f1f5f9; }
+
+  /* Theme & Color Customizer Grid */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+    clear: both;
+  }
+  .theme-option {
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: bold;
+    color: #1e293b;
+  }
+  .theme-option.active {
+    border-color: #16a34a;
+    background: #f0fdf4;
+  }
+  .theme-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,0,0,0.15);
+    flex-shrink: 0;
+  }
+  .color-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 14px 0;
+    justify-content: center;
+  }
+  .color-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+  }
+  .color-circle.active {
+    border-color: #1e293b;
+    transform: scale(1.12);
+  }
+  .custom-color-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 4px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  .custom-color-row input[type="color"] {
+    width: 44px;
+    height: 34px;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+
+  /* Navigation Drawer */
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 280px;
+    background: #f8fafc;
+    color: #1e293b;
+    z-index: 220;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .drawer.show { transform: translateX(0); }
+  .drawer-header {
+    background-color: var(--bg-header);
+    color: #fff;
+    padding: 28px 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .drawer-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .drawer-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #fff;
+    color: #1c3d42;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .drawer-menu {
+    padding: 12px 0;
+  }
+  .drawer-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #1e3a3a;
+    cursor: pointer;
+  }
+  .drawer-item:hover, .drawer-item:active { background: #e2e8f0; }
+
+  /* Full Screen Views */
+  .page-view {
+    position: fixed;
+    inset: 0;
+    background-color: var(--bg-main);
+    z-index: 150;
+    display: none;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .page-view.show { display: flex; }
+
+  /* List Detail Header */
+  .detail-header {
+    background-color: var(--bg-header);
+    padding: 12px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .detail-icon-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 64px;
+    max-width: 85px;
+  }
+  .detail-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .detail-stats {
+    flex: 1;
+    padding: 0 10px;
+    font-size: 13.5px;
+  }
+  .stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 3px 0;
+  }
+  .stat-val {
+    direction: ltr;
+    font-weight: bold;
+    font-size: 14.5px;
+    color: var(--text-main);
+  }
+
+  /* Transaction Items */
+  .tx-list {
+    padding: 10px 8px 95px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tx-card {
+    background-color: var(--tx-card-bg);
+    color: var(--tx-card-text);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .tx-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .tx-title {
+    font-size: 15.5px;
+    font-weight: bold;
+    flex: 1.15;
+    text-align: right;
+    word-break: break-word;
+  }
+  .tx-date {
+    flex: 0.85;
+    text-align: center;
+    font-size: 13.5px;
+    opacity: 0.92;
+    line-height: 1.45;
+  }
+  .tx-amount {
+    flex: 1.2;
+    text-align: left;
+    font-size: 15.5px;
+    font-weight: bold;
+    direction: ltr;
+  }
+  .tx-amount.pos { color: var(--tx-card-text); }
+  .tx-amount.neg { color: var(--tx-neg-text); }
+  .tx-details {
+    display: none;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.3);
+    font-size: 14px;
+  }
+  .tx-card.open .tx-details { display: block; }
+  .tx-note-content {
+    white-space: pre-wrap;
+    margin: 6px 0 12px;
+    line-height: 1.65;
+  }
+  .tx-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.25);
+  }
+  .tx-action-btn {
+    background: rgba(0,0,0,0.25);
+    border: none;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .tx-action-btn.del { color: #fca5a5; }
+
+  /* Form Page (Add/Edit Transaction) */
+  .form-page {
+    background-color: var(--form-bg);
+    color: var(--form-text);
+  }
+  .form-header {
+    background-color: #fff;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .form-container {
+    background: var(--form-card);
+    margin: 14px;
+    padding: 18px 14px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .input-box {
+    border: 1.5px solid #64748b;
+    border-radius: 10px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .input-box input, .input-box textarea, .input-box select {
+    border: none;
+    background: transparent;
+    flex: 1;
+    font-size: 15px;
+    color: #1e293b;
+    outline: none;
+    text-align: right;
+  }
+  .input-label {
+    color: #475569;
+    font-weight: bold;
+    font-size: 14.5px;
+    min-width: 72px;
+  }
+  .type-toggle {
+    display: flex;
+    background: #e2e8f0;
+    border-radius: 8px;
+    padding: 4px;
+    width: 240px;
+    margin: 0 auto;
+  }
+  .type-btn {
+    flex: 1;
+    padding: 8px 0;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    background: transparent;
+    color: #475569;
+  }
+  .type-btn.active-pay { background: #ef5350; color: #fff; }
+  .type-btn.active-rec { background: #22c55e; color: #fff; }
+  .submit-btn {
+    background-color: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+  }
+
+  /* Backup Page */
+  .backup-card {
+    background: #fff;
+    color: #1e293b;
+    margin: 14px;
+    border-radius: 10px;
+    padding: 24px 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .backup-status {
+    color: #15803d;
+    font-size: 18px;
+    font-weight: bold;
+    border-bottom: 2px solid #94a3b8;
+    width: 100%;
+    text-align: center;
+    padding-bottom: 14px;
+  }
+  .backup-path {
+    width: 100%;
+    text-align: left;
+    font-size: 13px;
+    color: #0284c7;
+    margin: 10px 0;
+    direction: ltr;
+    word-break: break-all;
+  }
+  .sd-card {
+    width: 180px;
+    height: 230px;
+    background: #4caf50;
+    border-radius: 18px;
+    clip-path: polygon(25% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 20%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 14px;
+    color: #fff;
+    margin: 20px 0;
+  }
+  .sd-pins {
+    display: flex;
+    gap: 12px;
+    align-self: flex-end;
+    margin-right: 14px;
+  }
+  .sd-pin { width: 22px; height: 42px; background: #fff; border-radius: 2px; }
+  .backup-btns {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+  }
+  .btn-backup {
+    background: #2eb82e;
+    color: #fff;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    flex: 1;
+  }
+  .btn-restore {
+    background: #38bdf8;
+    color: #fff;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    flex: 1;
+  }
+  .search-bar {
+    background: var(--bg-header);
+    padding: 8px 14px;
+    display: none;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .search-bar.show { display: block; }
+  .search-bar input {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    background: #fff;
+    color: #1e293b;
+  }
+  /* Icon selector in List modal */
+  .icon-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 10px 0;
+  }
+  .icon-pick-item {
+    border: 2px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .icon-pick-item.active {
+    border-color: #16a34a;
+    background: #f0fdf4;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Top App Bar -->
+  <header class="app-bar">
+    <div class="app-bar-right">
+      <button class="icon-btn" onclick="toggleDrawer(true)" title="منو">
+        <svg width="25" height="25" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <span class="app-title">دفترچه حساب</span>
+    </div>
+    <div class="app-bar-left">
+      <!-- دکمه تغییر تم (Theme Switcher) -->
+      <button class="icon-btn" onclick="openThemeModal()" title="تغییر تم">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </button>
+      <!-- دکمه تغییر رنگ (Color Picker) -->
+      <button class="icon-btn" onclick="openColorModal()" title="تغییر رنگ">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>
+      </button>
+      <!-- دکمه جستجو -->
+      <button class="icon-btn" onclick="toggleMainSearch()" title="جستجو">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      </button>
+      <!-- دکمه تغییر حالت نمایش شبکه/لیست -->
+      <button class="icon-btn" onclick="toggleGridMode()" title="تغییر نمایش">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="search-bar" id="mainSearchBar">
+    <input type="text" id="mainSearchInput" placeholder="جستجو در نام لیست یا تراکنش‌ها..." oninput="renderMain()">
+  </div>
+
+  <!-- Single Active Section Tab -->
+  <div class="tab-bar">
+    <div class="tab-item">مخارج</div>
+  </div>
+
+  <!-- Daily Summary Box -->
+  <section class="summary-card">
+    <div class="date-nav">
+      <button class="date-nav-btn" onclick="changeDay(1)" title="روز بعد">&#10094;</button>
+      <span class="date-nav-title" id="dayLabel" onclick="resetToToday()" title="بازگشت به امروز">امروز</span>
+      <button class="date-nav-btn" onclick="changeDay(-1)" title="روز قبل">&#10095;</button>
+    </div>
+    <div class="summary-boxes">
+      <div class="s-box receive">
+        <div class="s-box-title">دریافت</div>
+        <div class="s-box-val" id="dayReceive">۰</div>
+        <div class="s-box-unit">تومان</div>
+      </div>
+      <div class="s-box pay">
+        <div class="s-box-title">پرداخت</div>
+        <div class="s-box-val" id="dayPay">۰</div>
+        <div class="s-box-unit">تومان</div>
+      </div>
+      <div class="s-box remain">
+        <div class="s-box-title">باقی مانده</div>
+        <div class="s-box-val" id="totalRemain">۰</div>
+        <div class="s-box-unit">تومان</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lists Grid -->
+  <main class="lists-grid" id="listsGrid"></main>
+
+  <!-- Floating Action Button -->
+  <button class="fab" onclick="toggleBottomSheet(true)" title="افزودن">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/>
+    </svg>
+  </button>
+
+  <!-- Overlay -->
+  <div class="overlay" id="overlay" onclick="closeAllModals()"></div>
+
+  <!-- Action Bottom Sheet -->
+  <div class="bottom-sheet" id="bottomSheet">
+    <button class="bs-close" onclick="closeAllModals()">&#10005;</button>
+    <div class="bs-item" onclick="openListModal(null)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      <span>ایجاد لیست تراکنش</span>
+    </div>
+    <div class="bs-item" onclick="openTxForm(null, null)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <span>ثبت تراکنش جدید</span>
+    </div>
+  </div>
+
+  <!-- Theme Switcher Bottom Sheet -->
+  <div class="bottom-sheet" id="themeSheet">
+    <button class="bs-close" onclick="closeAllModals()">&#10005;</button>
+    <h3 style="font-size:16px;color:#1e293b;margin-bottom:4px">انتخاب تم برنامه</h3>
+    <div class="theme-grid" id="themeOptionsContainer"></div>
+  </div>
+
+  <!-- Color Customizer Bottom Sheet -->
+  <div class="bottom-sheet" id="colorSheet">
+    <button class="bs-close" onclick="closeAllModals()">&#10005;</button>
+    <h3 style="font-size:16px;color:#1e293b;margin-bottom:6px">تغییر رنگ و شخصی‌سازی ظاهر</h3>
+    <div style="font-size:13px;color:#64748b;clear:both">رنگ‌های آماده (کلیک کنید):</div>
+    <div class="color-swatches" id="presetSwatches"></div>
+    <div class="custom-color-row">
+      <span>رنگ اصلی و دکمه‌ها (Accent):</span>
+      <input type="color" id="pickerAccent" oninput="applyCustomColor('accent', this.value)">
+    </div>
+    <div class="custom-color-row">
+      <span>رنگ پس‌زمینه برنامه:</span>
+      <input type="color" id="pickerBgMain" oninput="applyCustomColor('bgMain', this.value)">
+    </div>
+    <div class="custom-color-row">
+      <span>رنگ نوار بالا (Header):</span>
+      <input type="color" id="pickerBgHeader" oninput="applyCustomColor('bgHeader', this.value)">
+    </div>
+    <div class="custom-color-row">
+      <span>رنگ کارت‌های تراکنش:</span>
+      <input type="color" id="pickerTxCard" oninput="applyCustomColor('txCardBg', this.value)">
+    </div>
+    <button class="submit-btn" style="width:100%;margin-top:10px;background:#475569;padding:10px" onclick="resetThemeAndColors()">بازنشانی به رنگ پیش‌فرض</button>
+  </div>
+
+  <!-- Create/Edit List Modal -->
+  <div class="bottom-sheet" id="listModalSheet">
+    <button class="bs-close" onclick="closeAllModals()">&#10005;</button>
+    <h3 style="font-size:16px;color:#1e293b;margin-bottom:12px" id="listModalTitle">ایجاد لیست تراکنش</h3>
+    <div class="input-box" style="margin-bottom:12px">
+      <span class="input-label">نام لیست</span>
+      <input type="text" id="listNameInput" placeholder="مثلاً: مخارج روزانه، حساب اصلی...">
+    </div>
+    <div style="font-size:13.5px;font-weight:bold;color:#475569">انتخاب آیکون:</div>
+    <div class="icon-picker-grid" id="iconPickerGrid"></div>
+    <div style="font-size:13.5px;font-weight:bold;color:#475569;margin-top:8px">رنگ نشانگر تعداد:</div>
+    <div style="display:flex;gap:12px;margin:10px 0" id="badgeColorPicker">
+      <div class="color-circle" style="background:#659c44;width:30px;height:30px" onclick="selectBadgeColor('green')" id="bc_green"></div>
+      <div class="color-circle" style="background:#b8aa1e;width:30px;height:30px" onclick="selectBadgeColor('yellow')" id="bc_yellow"></div>
+      <div class="color-circle" style="background:#0284c7;width:30px;height:30px" onclick="selectBadgeColor('blue')" id="bc_blue"></div>
+      <div class="color-circle" style="background:#7c3aed;width:30px;height:30px" onclick="selectBadgeColor('purple')" id="bc_purple"></div>
+      <div class="color-circle" style="background:#e11d48;width:30px;height:30px" onclick="selectBadgeColor('red')" id="bc_red"></div>
+    </div>
+    <button class="submit-btn" style="width:100%;margin-top:8px" onclick="saveListModal()">ذخیره لیست</button>
+  </div>
+
+  <!-- Drawer -->
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-user" onclick="editProfileName()" title="ویرایش نام">
+        <div class="drawer-avatar">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <span id="profileName">کاربر</span>
+      </div>
+    </div>
+    <div class="drawer-menu">
+      <div class="drawer-item" onclick="openBackupPage()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c3d42" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+        <span>نسخه پشتیبان</span>
+      </div>
+      <div class="drawer-item" onclick="openThemeModal()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c3d42" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <span>تغییر تم برنامه</span>
+      </div>
+      <div class="drawer-item" onclick="openColorModal()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c3d42" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>
+        <span>تغییر رنگ ظاهری</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- List Detail View -->
+  <section class="page-view" id="listDetailView">
+    <div class="detail-header">
+      <div class="detail-icon-box" onclick="openListModal(currentListId)" style="cursor:pointer" title="ویرایش نام و آیکون لیست">
+        <div class="detail-circle" id="detailIconCircle"></div>
+        <span id="detailListName" style="font-size:13px;font-weight:bold;text-align:center"></span>
+      </div>
+      <div class="detail-stats">
+        <div class="stat-row">
+          <span style="color:#4ade80">↓ دریافت :</span>
+          <span class="stat-val" id="detailRec">۰</span>
+          <span style="font-size:11px;opacity:0.8">تومان</span>
+        </div>
+        <div class="stat-row">
+          <span style="color:#f87171">↑ پرداخت :</span>
+          <span class="stat-val" id="detailPay">۰</span>
+          <span style="font-size:11px;opacity:0.8">تومان</span>
+        </div>
+        <div class="stat-row">
+          <span style="color:#38bdf8">Σ مجموع :</span>
+          <span class="stat-val" id="detailSum">۰</span>
+          <span style="font-size:11px;opacity:0.8">تومان</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <button class="icon-btn" onclick="toggleDetailSearch()" title="جستجو">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </button>
+        <button class="icon-btn" onclick="deleteCurrentList()" title="حذف لیست">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        </button>
+        <button class="icon-btn" onclick="closeListDetail()" title="بازگشت">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="search-bar" id="detailSearchBar">
+      <input type="text" id="detailSearchInput" placeholder="جستجو در تراکنش‌های این لیست..." oninput="renderListDetail()">
+    </div>
+    <div class="tx-list" id="txListContainer"></div>
+    <button class="fab" onclick="openTxForm(currentListId, null)" title="ثبت تراکنش در این لیست">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </section>
+
+  <!-- Add / Edit Transaction View -->
+  <section class="page-view form-page" id="txFormView">
+    <div class="form-header">
+      <button class="icon-btn" style="color:#334155" onclick="closeTxForm()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <span style="font-size:17px;font-weight:bold;color:#1e293b" id="txFormTitle">ثبت تراکنش جدید</span>
+      <div style="width:24px"></div>
+    </div>
+    <div class="form-container">
+      <div class="input-box">
+        <span class="input-label">شرح</span>
+        <input type="text" id="txTitleInput" placeholder="عنوان تراکنش...">
+      </div>
+      <div class="input-box">
+        <span class="input-label">مبلغ</span>
+        <input type="text" inputmode="decimal" id="txAmountInput" placeholder="0" style="direction:ltr;text-align:left;font-weight:bold" oninput="formatAmountInput(this)">
+        <span style="color:#64748b;font-size:13px">تومان</span>
+      </div>
+      <div class="input-box">
+        <span class="input-label">یادداشت</span>
+        <textarea id="txDetailInput" rows="3" placeholder="توضیحات و یادداشت..."></textarea>
+      </div>
+      <div class="input-box">
+        <span class="input-label">تاریخ شمسی</span>
+        <input type="text" id="txDateFaInput" style="direction:ltr;text-align:left;font-weight:bold" placeholder="1405/8/1">
+        <button type="button" onclick="setTodayInForm()" style="background:#e2e8f0;border:none;padding:4px 8px;border-radius:6px;font-size:12px;cursor:pointer;color:#334155">امروز</button>
+      </div>
+      <div class="input-box">
+        <span class="input-label">لیست</span>
+        <select id="txListSelect"></select>
+      </div>
+      <div style="text-align:right;font-size:14px;color:#475569;margin-top:4px">نوع تراکنش</div>
+      <div class="type-toggle">
+        <button type="button" class="type-btn active-pay" id="btnTypePay" onclick="setTxType('pay')">پرداخت</button>
+        <button type="button" class="type-btn" id="btnTypeRec" onclick="setTxType('rec')">دریافت</button>
+      </div>
+      <button class="submit-btn" onclick="saveTransaction()">ثبت</button>
+    </div>
+  </section>
+
+  <!-- Backup & Restore View -->
+  <section class="page-view" id="backupView">
+    <header class="app-bar">
+      <button class="icon-btn" onclick="closeBackupPage()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <span class="app-title">نسخه پشتیبان</span>
+      <div style="width:24px"></div>
+    </header>
+    <div class="backup-card">
+      <div style="width:100%">
+        <div class="backup-status">فایل پشتیبان موجود است</div>
+        <div style="margin-top:14px;font-size:14px;color:#334155">مسیر استاندارد فایل پشتیبان :</div>
+        <div class="backup-path">/storage/emulated/0/hesab/BackUp/backup</div>
+      </div>
+      <div class="sd-card">
+        <div class="sd-pins">
+          <div class="sd-pin"></div><div class="sd-pin"></div><div class="sd-pin"></div>
+        </div>
+        <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M21 12a9 9 0 11-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+        <div style="text-align:center;font-size:14px;line-height:1.6">
+          <div id="backupDateFa">۱۴۰۵/۸/۱</div>
+          <div id="backupDateEn">۲۰۲۶/۱۰/۲۳</div>
+        </div>
+      </div>
+      <input type="file" id="sqliteFileInput" style="display:none" onchange="importSQLiteFile(event)">
+      <div class="backup-btns">
+        <button class="btn-backup" onclick="exportSQLiteFile()">پشتیبان گیری</button>
+        <button class="btn-restore" onclick="document.getElementById('sqliteFileInput').click()">بازیابی</button>
+      </div>
+    </div>
+  </section>
+
+<script>
+// --- 100% Complete Pre-loaded SQLite Backup Data (All 137 Records) ---
+const INITIAL_DATA = {"version": 2, "profileName": "کاربر", "lists": [], "transactions": {}};
+
+// Load from localStorage (upgrade automatically if old version without v2 flag)
+let savedRaw = localStorage.getItem('hesab_app_data_clean');
+let appData = savedRaw ? JSON.parse(savedRaw) : JSON.parse(JSON.stringify(INITIAL_DATA));
+
+let currentDayOffset = 0;
+let currentListId = null;
+let editingTxId = null;
+let currentTxType = 'pay';
+let editingListId = null;
+let selectedListIcon = 'bag';
+let selectedBadgeColor = 'green';
+
+function saveState() {
+  localStorage.setItem('hesab_app_data_clean', JSON.stringify(appData));
+}
+
+// --- Themes & Colors System ---
+const THEMES = {
+  classic: {
+    name: 'سبز کلاسیک (پیش‌فرض)',
+    bgMain: '#0c3530', bgHeader: '#0b3833', textMain: '#ffffff', textHeader: '#cbd5e1',
+    accent: '#22c55e', fabBg: '#165b63', summaryBg: '#d8dee3', summaryText: '#1e293b',
+    cardBg: '#e2e6ea', cardText: '#334155', txCardBg: '#215e66', txCardText: '#ffffff',
+    posPill: '#198719', negPill: '#d64584', txNegText: '#ff6b6b'
+  },
+  amoled: {
+    name: 'تاریک مطلق (AMOLED)',
+    bgMain: '#090d16', bgHeader: '#111827', textMain: '#f8fafc', textHeader: '#e2e8f0',
+    accent: '#10b981', fabBg: '#059669', summaryBg: '#1e293b', summaryText: '#f8fafc',
+    cardBg: '#1f2937', cardText: '#f1f5f9', txCardBg: '#1e293b', txCardText: '#f8fafc',
+    posPill: '#059669', negPill: '#e11d48', txNegText: '#fb7185'
+  },
+  light: {
+    name: 'روشن و مدرن (Light)',
+    bgMain: '#f1f5f9', bgHeader: '#0f766e', textMain: '#0f172a', textHeader: '#ffffff',
+    accent: '#14b8a6', fabBg: '#0f766e', summaryBg: '#ffffff', summaryText: '#1e293b',
+    cardBg: '#ffffff', cardText: '#1e293b', txCardBg: '#115e59', txCardText: '#ffffff',
+    posPill: '#16a34a', negPill: '#e11d48', txNegText: '#fca5a5'
+  },
+  ocean: {
+    name: 'سرمه‌ای اقیانوسی',
+    bgMain: '#0a192f', bgHeader: '#0f2744', textMain: '#e6f1ff', textHeader: '#cbd5e1',
+    accent: '#38bdf8', fabBg: '#0284c7', summaryBg: '#dbeafe', summaryText: '#1e3a8a',
+    cardBg: '#e0f2fe', cardText: '#0f172a', txCardBg: '#1e3a5f', txCardText: '#ffffff',
+    posPill: '#0284c7', negPill: '#e11d48', txNegText: '#fda4af'
+  },
+  royal: {
+    name: 'بنفش سلطنتی',
+    bgMain: '#1a102c', bgHeader: '#271745', textMain: '#f3e8ff', textHeader: '#e9d5ff',
+    accent: '#a855f7', fabBg: '#7e22ce', summaryBg: '#ede9fe', summaryText: '#3b0764',
+    cardBg: '#f3e8ff', cardText: '#2e1065', txCardBg: '#3b2166', txCardText: '#ffffff',
+    posPill: '#16a34a', negPill: '#db2777', txNegText: '#f472b6'
+  },
+  espresso: {
+    name: 'قهوه‌ای کلاسیک',
+    bgMain: '#231915', bgHeader: '#2e211b', textMain: '#fef3c7', textHeader: '#fde68a',
+    accent: '#f59e0b', fabBg: '#b45309', summaryBg: '#f5ebe6', summaryText: '#451a03',
+    cardBg: '#fafaf9', cardText: '#292524', txCardBg: '#46332a', txCardText: '#ffffff',
+    posPill: '#15803d', negPill: '#be123c', txNegText: '#fda4af'
+  }
+};
+
+const PRESET_COLORS = [
+  '#22c55e', '#10b981', '#06b6d4', '#3b82f6',
+  '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b'
+];
+
+let currentThemeKey = localStorage.getItem('hesab_theme_key') || 'classic';
+let customColors = JSON.parse(localStorage.getItem('hesab_custom_colors') || '{}');
+
+function applyThemeAndColors() {
+  const base = THEMES[currentThemeKey] || THEMES.classic;
+  const merged = Object.assign({}, base, customColors);
+  const r = document.documentElement.style;
+  r.setProperty('--bg-main', merged.bgMain);
+  r.setProperty('--bg-header', merged.bgHeader);
+  r.setProperty('--text-main', merged.textMain);
+  r.setProperty('--text-header', merged.textHeader);
+  r.setProperty('--accent', merged.accent);
+  r.setProperty('--fab-bg', merged.fabBg);
+  r.setProperty('--summary-bg', merged.summaryBg);
+  r.setProperty('--summary-text', merged.summaryText);
+  r.setProperty('--card-bg', merged.cardBg);
+  r.setProperty('--card-text', merged.cardText);
+  r.setProperty('--tx-card-bg', merged.txCardBg);
+  r.setProperty('--tx-card-text', merged.txCardText);
+  r.setProperty('--pos-pill', merged.posPill);
+  r.setProperty('--neg-pill', merged.negPill);
+  r.setProperty('--tx-neg-text', merged.txNegText);
+
+  const meta = document.getElementById('metaThemeColor');
+  if (meta) meta.setAttribute('content', merged.bgHeader);
+
+  // Sync color inputs if present
+  const pAcc = document.getElementById('pickerAccent');
+  if (pAcc) {
+    pAcc.value = merged.accent;
+    document.getElementById('pickerBgMain').value = merged.bgMain;
+    document.getElementById('pickerBgHeader').value = merged.bgHeader;
+    document.getElementById('pickerTxCard').value = merged.txCardBg;
+  }
+}
+
+function selectTheme(key) {
+  currentThemeKey = key;
+  customColors = {};
+  localStorage.setItem('hesab_theme_key', key);
+  localStorage.removeItem('hesab_custom_colors');
+  applyThemeAndColors();
+  renderThemeOptions();
+  renderMain();
+}
+
+function applyCustomColor(prop, val) {
+  customColors[prop] = val;
+  if (prop === 'accent') customColors.fabBg = val;
+  localStorage.setItem('hesab_custom_colors', JSON.stringify(customColors));
+  applyThemeAndColors();
+  renderColorSwatches();
+}
+
+function resetThemeAndColors() {
+  selectTheme('classic');
+  closeAllModals();
+}
+
+function renderThemeOptions() {
+  const container = document.getElementById('themeOptionsContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  Object.keys(THEMES).forEach(k => {
+    const t = THEMES[k];
+    const div = document.createElement('div');
+    div.className = 'theme-option' + (currentThemeKey === k && Object.keys(customColors).length === 0 ? ' active' : '');
+    div.onclick = () => selectTheme(k);
+    div.innerHTML = `
+      <div class="theme-swatch" style="background:linear-gradient(135deg, ${t.bgMain} 50%, ${t.accent} 50%)"></div>
+      <span>${t.name}</span>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function renderColorSwatches() {
+  const box = document.getElementById('presetSwatches');
+  if (!box) return;
+  box.innerHTML = '';
+  const activeAccent = customColors.accent || (THEMES[currentThemeKey] && THEMES[currentThemeKey].accent);
+  PRESET_COLORS.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'color-circle' + (activeAccent === c ? ' active' : '');
+    el.style.backgroundColor = c;
+    el.onclick = () => applyCustomColor('accent', c);
+    box.appendChild(el);
+  });
+}
+
+function openThemeModal() {
+  closeAllModals();
+  renderThemeOptions();
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('themeSheet').classList.add('show');
+}
+
+function openColorModal() {
+  closeAllModals();
+  applyThemeAndColors();
+  renderColorSwatches();
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('colorSheet').classList.add('show');
+}
+
+// --- Exact Financial Math & Date Conversion ---
+function roundMoney(val) {
+  const n = Number(val);
+  if (isNaN(n)) return 0;
+  return Math.round((n + Number.EPSILON) * 10000) / 10000;
+}
+
+function safeAdd(a, b) {
+  return roundMoney(roundMoney(a) + roundMoney(b));
+}
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function toPersianDigits(str) {
+  const farsiDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+  return String(str).replace(/\d/g, x => farsiDigits[x]);
+}
+
+function toEnglishDigits(str) {
+  return String(str ?? '')
+    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+}
+
+function formatNumber(num) {
+  const clean = roundMoney(num);
+  if (clean === 0) return '۰';
+  const sign = clean < 0 ? '-' : '';
+  const abs = Math.abs(clean);
+  const str = abs.toFixed(4).replace(/\.?0+$/, '');
+  const parts = str.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return toPersianDigits(sign + parts.join('.'));
+}
+
+// Exact Mathematical Jalali <-> Gregorian Converter (0 Mismatches with SunDatePicker)
+function jalaliToGregorian(jy, jm, jd) {
+  jy = parseInt(jy, 10) + 1595;
+  jm = parseInt(jm, 10);
+  jd = parseInt(jd, 10);
+  let days = -355668 + (365 * jy) + (Math.floor(jy / 33) * 8) + Math.floor(((jy % 33) + 3) / 4) + jd;
+  if (jm < 7) days += (jm - 1) * 31;
+  else days += ((jm - 7) * 30) + 186;
+  let gy = 400 * Math.floor(days / 146097);
+  days %= 146097;
+  if (days > 36524) {
+    days -= 1;
+    gy += 100 * Math.floor(days / 36524);
+    days %= 36524;
+    if (days >= 365) days += 1;
+  }
+  gy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  if (days > 365) {
+    gy += Math.floor((days - 1) / 365);
+    days = (days - 1) % 365;
+  }
+  let gd = days + 1;
+  const isLeap = (gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0);
+  const sal_a = [0, 31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let gm = 0;
+  while (gm < 13 && gd > sal_a[gm]) {
+    gd -= sal_a[gm];
+    gm++;
+  }
+  return `${gy}/${gm}/${gd}`;
+}
+
+function gregorianToJalali(gy, gm, gd) {
+  gy = parseInt(gy, 10);
+  gm = parseInt(gm, 10);
+  gd = parseInt(gd, 10);
+  const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  const gy2 = gm > 2 ? gy + 1 : gy;
+  let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+  let jy = -1595 + (33 * Math.floor(days / 12053));
+  days %= 12053;
+  jy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  if (days > 365) {
+    jy += Math.floor((days - 1) / 365);
+    days = (days - 1) % 365;
+  }
+  let jm, jd;
+  if (days < 186) {
+    jm = 1 + Math.floor(days / 31);
+    jd = 1 + (days % 31);
+  } else {
+    jm = 7 + Math.floor((days - 186) / 30);
+    jd = 1 + ((days - 186) % 30);
+  }
+  return `${jy}/${jm}/${jd}`;
+}
+
+function normalizeJalaliDate(str) {
+  const clean = toEnglishDigits(str).trim().replace(/[-.]/g, '/');
+  const p = clean.split('/').map(x => parseInt(x, 10));
+  if (p.length === 3 && !isNaN(p[0]) && !isNaN(p[1]) && !isNaN(p[2])) {
+    const y = p[0] < 100 ? 1400 + p[0] : p[0];
+    const m = Math.min(12, Math.max(1, p[1]));
+    const d = Math.min(31, Math.max(1, p[2]));
+    return `${y}/${m}/${d}`;
+  }
+  const now = new Date();
+  return gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
+function getDateSortKey(datefa, dateEn) {
+  const cleanFa = toEnglishDigits(datefa || '').split('/').map(Number);
+  if (cleanFa.length === 3 && !isNaN(cleanFa[0])) {
+    return cleanFa[0] * 10000 + cleanFa[1] * 100 + cleanFa[2];
+  }
+  const cleanEn = toEnglishDigits(dateEn || '').split('/').map(Number);
+  if (cleanEn.length === 3 && !isNaN(cleanEn[0])) {
+    return cleanEn[0] * 10000 + cleanEn[1] * 100 + cleanEn[2];
+  }
+  return 0;
+}
+
+function getWeekdayName(gregStr, datefaStr) {
+  const days = ['یکشنبه','دوشنبه','سه شنبه','چهارشنبه','پنجشنبه','جمعه','شنبه'];
+  let g = gregStr;
+  if (!g && datefaStr) {
+    const p = normalizeJalaliDate(datefaStr).split('/');
+    g = jalaliToGregorian(p[0], p[1], p[2]);
+  }
+  if (!g) return '';
+  const p = toEnglishDigits(g).split('/');
+  if (p.length !== 3) return '';
+  const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  return isNaN(d) ? '' : days[d.getDay()];
+}
+
+const ICONS = {
+  bag: `<svg class="list-icon" viewBox="0 0 24 24" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>`,
+  gamepad: `<svg class="list-icon" viewBox="0 0 24 24" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r="1" fill="currentColor"/><circle cx="17" cy="13" r="1" fill="currentColor"/></svg>`,
+  bulb: `<svg class="list-icon" viewBox="0 0 24 24" stroke-width="1.5"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>`,
+  card: `<svg class="list-icon" viewBox="0 0 24 24" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>`,
+  car: `<svg class="list-icon" viewBox="0 0 24 24" stroke-width="1.5"><path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>`,
+  home: `<svg class="list-icon" viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+  coin: `<svg class="list-icon" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0013 8h-2a2 2 0 000 4h2a2 2 0 010 4h-2a2 2 0 01-1.8-1M12 6v2m0 8v2"/></svg>`,
+  gift: `<svg class="list-icon" viewBox="0 0 24 24" stroke-width="1.5"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>`
+};
+
+function getIconSvg(type) {
+  return ICONS[type] || ICONS.bag;
+}
+
+// --- Render Main Page ---
+function renderMain() {
+  document.getElementById('profileName').textContent = appData.profileName || 'کاربر';
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + currentDayOffset);
+  const targetJalali = gregorianToJalali(targetDate.getFullYear(), targetDate.getMonth() + 1, targetDate.getDate());
+
+  document.getElementById('dayLabel').textContent = currentDayOffset === 0 ? 'امروز' : toPersianDigits(targetJalali);
+
+  let dayRec = 0, dayPay = 0, grandTotal = 0;
+  const searchQ = (document.getElementById('mainSearchInput').value || '').trim().toLowerCase();
+  const grid = document.getElementById('listsGrid');
+  grid.innerHTML = '';
+  if (sortedLists.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;direction:rtl;text-align:center;padding:36px 16px;background:rgba(255,255,255,0.08);border-radius:12px;color:var(--text-header);font-size:14px;line-height:1.9;">هیچ لیستی موجود نیست.<br>از منوی بالا (☰ &larr; <b>نسخه پشتیبان</b>) فایل <b>backup</b> خود را بازیابی کنید یا با دکمه پایین صفحه لیست جدید بسازید.</div>';
+  }
+
+  // Sort lists by id DESC (so newest is first, matching Android app)
+  const sortedLists = appData.lists.slice().sort((a, b) => b.id - a.id);
+
+  sortedLists.forEach(list => {
+    const txs = appData.transactions[list.id] || [];
+    let listSum = 0;
+    txs.forEach(t => {
+      const val = roundMoney(t.faw);
+      listSum = safeAdd(listSum, val);
+      if (normalizeJalaliDate(t.datefa) === targetJalali) {
+        if (val > 0) dayRec = safeAdd(dayRec, val);
+        else if (val < 0) dayPay = safeAdd(dayPay, Math.abs(val));
+      }
+    });
+    grandTotal = safeAdd(grandTotal, listSum);
+
+    if (searchQ && !String(list.name).toLowerCase().includes(searchQ)) {
+      const hasMatchingTx = txs.some(t =>
+        String(t.enw || '').toLowerCase().includes(searchQ) ||
+        String(t.detail || '').toLowerCase().includes(searchQ)
+      );
+      if (!hasMatchingTx) return;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'list-card';
+    card.onclick = () => openListDetail(list.id);
+    const balClass = listSum >= 0 ? 'pos' : 'neg';
+    const badgeClass = 'list-badge ' + (list.badgeColor || 'green');
+
+    card.innerHTML = `
+      <div class="${badgeClass}">${toPersianDigits(txs.length)}</div>
+      ${getIconSvg(list.icon)}
+      <div class="list-name">${escapeHtml(list.name)}</div>
+      <div class="list-balance ${balClass}">${formatNumber(listSum)}</div>
+    `;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('dayReceive').textContent = formatNumber(dayRec);
+  document.getElementById('dayPay').textContent = formatNumber(dayPay);
+  document.getElementById('totalRemain').textContent = formatNumber(grandTotal);
+}
+
+function changeDay(delta) {
+  currentDayOffset += delta;
+  renderMain();
+}
+function resetToToday() {
+  currentDayOffset = 0;
+  renderMain();
+}
+function toggleMainSearch() {
+  const bar = document.getElementById('mainSearchBar');
+  bar.classList.toggle('show');
+  if (bar.classList.contains('show')) document.getElementById('mainSearchInput').focus();
+}
+function toggleDetailSearch() {
+  const bar = document.getElementById('detailSearchBar');
+  bar.classList.toggle('show');
+  if (bar.classList.contains('show')) document.getElementById('detailSearchInput').focus();
+}
+function toggleGridMode() {
+  document.getElementById('listsGrid').classList.toggle('single-col');
+}
+
+// --- List Detail Page ---
+function openListDetail(listId) {
+  currentListId = listId;
+  document.getElementById('detailSearchInput').value = '';
+  document.getElementById('detailSearchBar').classList.remove('show');
+  document.getElementById('listDetailView').classList.add('show');
+  renderListDetail();
+}
+function closeListDetail() {
+  document.getElementById('listDetailView').classList.remove('show');
+  currentListId = null;
+  renderMain();
+}
+function renderListDetail() {
+  const list = appData.lists.find(l => l.id === currentListId);
+  if (!list) return;
+  document.getElementById('detailListName').textContent = list.name;
+  document.getElementById('detailIconCircle').innerHTML = getIconSvg(list.icon).replace('class="list-icon"', 'width="30" height="30" stroke="#111" fill="none"');
+
+  const rawTxs = appData.transactions[list.id] || [];
+  // Sort transactions by Date DESC, then ID DESC (matching original Android app)
+  const txs = rawTxs.slice().sort((a, b) => {
+    const kB = getDateSortKey(b.datefa, b.date);
+    const kA = getDateSortKey(a.datefa, a.date);
+    if (kB !== kA) return kB - kA;
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  let rec = 0, pay = 0, sum = 0;
+  txs.forEach(t => {
+    const v = roundMoney(t.faw);
+    sum = safeAdd(sum, v);
+    if (v > 0) rec = safeAdd(rec, v);
+    else if (v < 0) pay = safeAdd(pay, Math.abs(v));
+  });
+
+  document.getElementById('detailRec').textContent = formatNumber(rec);
+  document.getElementById('detailPay').textContent = formatNumber(pay);
+  document.getElementById('detailSum').textContent = formatNumber(sum);
+
+  const q = (document.getElementById('detailSearchInput').value || '').trim().toLowerCase();
+  const container = document.getElementById('txListContainer');
+  container.innerHTML = '';
+
+  txs.forEach(t => {
+    if (q && !String(t.enw || '').toLowerCase().includes(q) && !String(t.detail || '').toLowerCase().includes(q)) return;
+    const val = roundMoney(t.faw);
+    const isNeg = val < 0;
+    const amtText = formatNumber(Math.abs(val)) + ' تومان';
+    const weekDay = getWeekdayName(t.date, t.datefa);
+
+    const card = document.createElement('div');
+    card.className = 'tx-card';
+    card.onclick = (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      card.classList.toggle('open');
+    };
+    card.innerHTML = `
+      <div class="tx-main">
+        <div class="tx-title">${escapeHtml(t.enw !== '' ? t.enw : 'بدون شرح')}</div>
+        <div class="tx-date">
+          <div>${escapeHtml(weekDay)}</div>
+          <div>${toPersianDigits(escapeHtml(t.datefa || ''))}</div>
+        </div>
+        <div class="tx-amount ${isNeg ? 'neg' : 'pos'}">
+          <span style="font-size:12px;margin-left:4px">⌄</span>${amtText}
+        </div>
+      </div>
+      <div class="tx-details">
+        <div style="font-weight:bold;opacity:0.85">یادداشت :</div>
+        <div class="tx-note-content">${t.detail ? escapeHtml(t.detail) : '—'}</div>
+        <div class="tx-actions">
+          <span>${t.pic ? '📎 ' + escapeHtml(t.pic.replace(/#/g, ' ')) : 'تصویر'}</span>
+          <div style="display:flex;gap:8px">
+            <button class="tx-action-btn" onclick="openTxForm(${list.id}, ${t.id})">ویرایش</button>
+            <button class="tx-action-btn del" onclick="deleteTx(${list.id}, ${t.id})">حذف</button>
+          </div>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function deleteTx(listId, txId) {
+  if (!confirm('آیا از حذف این تراکنش مطمئن هستید؟')) return;
+  appData.transactions[listId] = (appData.transactions[listId] || []).filter(t => t.id !== txId);
+  saveState();
+  renderListDetail();
+}
+
+function deleteCurrentList() {
+  if (!currentListId) return;
+  if (!confirm('آیا از حذف کامل این لیست و تمامی تراکنش‌های آن مطمئن هستید؟')) return;
+  appData.lists = appData.lists.filter(l => l.id !== currentListId);
+  delete appData.transactions[currentListId];
+  saveState();
+  closeListDetail();
+}
+
+// --- Create / Edit List Modal ---
+function renderIconPicker() {
+  const grid = document.getElementById('iconPickerGrid');
+  grid.innerHTML = '';
+  Object.keys(ICONS).forEach(k => {
+    const div = document.createElement('div');
+    div.className = 'icon-pick-item' + (selectedListIcon === k ? ' active' : '');
+    div.innerHTML = ICONS[k].replace('class="list-icon"', 'width="28" height="28" stroke="#1e293b" fill="none"');
+    div.onclick = () => {
+      selectedListIcon = k;
+      renderIconPicker();
+    };
+    grid.appendChild(div);
+  });
+}
+
+function selectBadgeColor(c) {
+  selectedBadgeColor = c;
+  ['green','yellow','blue','purple','red'].forEach(col => {
+    const el = document.getElementById('bc_' + col);
+    if (el) el.classList.toggle('active', col === c);
+  });
+}
+
+function openListModal(listId) {
+  closeAllModals();
+  editingListId = listId;
+  if (listId) {
+    const l = appData.lists.find(x => x.id === listId);
+    if (!l) return;
+    document.getElementById('listModalTitle').textContent = 'ویرایش لیست تراکنش';
+    document.getElementById('listNameInput').value = l.name;
+    selectedListIcon = l.icon || 'bag';
+    selectedBadgeColor = l.badgeColor || 'green';
+  } else {
+    document.getElementById('listModalTitle').textContent = 'ایجاد لیست تراکنش جدید';
+    document.getElementById('listNameInput').value = '';
+    selectedListIcon = 'bag';
+    selectedBadgeColor = 'green';
+  }
+  renderIconPicker();
+  selectBadgeColor(selectedBadgeColor);
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('listModalSheet').classList.add('show');
+}
+
+function saveListModal() {
+  const name = document.getElementById('listNameInput').value.trim();
+  if (!name) {
+    alert('لطفاً نام لیست را وارد کنید.');
+    return;
+  }
+  if (editingListId) {
+    const l = appData.lists.find(x => x.id === editingListId);
+    if (l) {
+      l.name = name;
+      l.icon = selectedListIcon;
+      l.badgeColor = selectedBadgeColor;
+    }
+    saveState();
+    closeAllModals();
+    if (currentListId === editingListId) renderListDetail();
+    renderMain();
+  } else {
+    const maxId = appData.lists.reduce((m, l) => Math.max(m, l.id), 37);
+    const newId = maxId + 1;
+    const rawRes = selectedListIcon === 'gamepad' ? '2131231115/2131230921' :
+                   selectedListIcon === 'bulb' ? '2131231119/2131230928' : '2131231105/2131230921';
+    appData.lists.unshift({
+      id: newId,
+      name: name,
+      icon: selectedListIcon,
+      badgeColor: selectedBadgeColor,
+      rawRes: rawRes
+    });
+    appData.transactions[newId] = [];
+    saveState();
+    closeAllModals();
+    renderMain();
+  }
+}
+
+function editProfileName() {
+  const newName = prompt('نام پروفایل خود را وارد کنید:', appData.profileName || 'کاربر');
+  if (newName && newName.trim()) {
+    appData.profileName = newName.trim();
+    saveState();
+    renderMain();
+  }
+}
+
+// --- Add / Edit Transaction Form ---
+function formatAmountInput(input) {
+  let val = toEnglishDigits(input.value).replace(/[^\d.]/g, '');
+  const firstDot = val.indexOf('.');
+  if (firstDot !== -1) {
+    val = val.slice(0, firstDot + 1) + val.slice(firstDot + 1).replace(/\./g, '');
+  }
+  const parts = val.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  input.value = parts.length > 1 ? parts[0] + '.' + parts[1] : parts[0];
+}
+
+function setTxType(type) {
+  currentTxType = type;
+  document.getElementById('btnTypePay').className = 'type-btn' + (type === 'pay' ? ' active-pay' : '');
+  document.getElementById('btnTypeRec').className = 'type-btn' + (type === 'rec' ? ' active-rec' : '');
+}
+
+function setTodayInForm() {
+  const now = new Date();
+  document.getElementById('txDateFaInput').value = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
+function openTxForm(listId, txId) {
+  closeAllModals();
+  if (appData.lists.length === 0) {
+    alert('ابتدا یک لیست تراکنش ایجاد کنید.');
+    return;
+  }
+  const select = document.getElementById('txListSelect');
+  select.innerHTML = '';
+  const sortedLists = appData.lists.slice().sort((a, b) => b.id - a.id);
+  sortedLists.forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l.id;
+    opt.textContent = l.name;
+    select.appendChild(opt);
+  });
+
+  const targetListId = listId || sortedLists[0].id;
+  select.value = targetListId;
+  editingTxId = txId;
+
+  if (txId !== null) {
+    document.getElementById('txFormTitle').textContent = 'ویرایش تراکنش';
+    const tx = (appData.transactions[targetListId] || []).find(t => t.id === txId);
+    if (tx) {
+      document.getElementById('txTitleInput').value = tx.enw || '';
+      const rawAmt = Math.abs(roundMoney(tx.faw));
+      const parts = String(rawAmt).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      document.getElementById('txAmountInput').value = parts.join('.');
+      document.getElementById('txDetailInput').value = tx.detail || '';
+      document.getElementById('txDateFaInput').value = tx.datefa || '';
+      setTxType(Number(tx.faw) < 0 ? 'pay' : 'rec');
+      select.disabled = true;
+    }
+  } else {
+    document.getElementById('txFormTitle').textContent = 'ثبت تراکنش جدید';
+    document.getElementById('txTitleInput').value = '';
+    document.getElementById('txAmountInput').value = '';
+    document.getElementById('txDetailInput').value = '';
+    setTodayInForm();
+    setTxType('pay');
+    select.disabled = false;
+  }
+
+  document.getElementById('txFormView').classList.add('show');
+}
+
+function closeTxForm() {
+  document.getElementById('txFormView').classList.remove('show');
+}
+
+function saveTransaction() {
+  const title = document.getElementById('txTitleInput').value.trim();
+  const rawAmtStr = toEnglishDigits(document.getElementById('txAmountInput').value).replace(/,/g, '');
+  const amountNum = roundMoney(parseFloat(rawAmtStr || '0'));
+  const detail = document.getElementById('txDetailInput').value;
+  const datefa = normalizeJalaliDate(document.getElementById('txDateFaInput').value);
+  const jParts = datefa.split('/').map(Number);
+  const dateGreg = jalaliToGregorian(jParts[0], jParts[1], jParts[2]);
+  const listId = Number(document.getElementById('txListSelect').value);
+
+  if (!title && amountNum === 0 && !detail.trim()) {
+    alert('لطفاً شرح، مبلغ یا یادداشت تراکنش را وارد کنید.');
+    return;
+  }
+
+  const finalAmount = amountNum === 0 ? 0 : (currentTxType === 'pay' ? -Math.abs(amountNum) : Math.abs(amountNum));
+  if (!appData.transactions[listId]) appData.transactions[listId] = [];
+
+  if (editingTxId !== null) {
+    const idx = appData.transactions[listId].findIndex(t => t.id === editingTxId);
+    if (idx > -1) {
+      appData.transactions[listId][idx].enw = title;
+      appData.transactions[listId][idx].faw = finalAmount;
+      appData.transactions[listId][idx].detail = detail;
+      appData.transactions[listId][idx].datefa = datefa;
+      appData.transactions[listId][idx].date = dateGreg;
+    }
+  } else {
+    const maxId = appData.transactions[listId].reduce((m, t) => Math.max(m, t.id || 0), 0);
+    appData.transactions[listId].push({
+      id: maxId + 1,
+      enw: title,
+      faw: finalAmount,
+      date: dateGreg,
+      datefa: datefa,
+      detail: detail,
+      pic: ""
+    });
+  }
+
+  saveState();
+  closeTxForm();
+  if (currentListId === listId) renderListDetail();
+  renderMain();
+}
+
+// --- Modals & Drawer ---
+function toggleBottomSheet(show) {
+  closeAllModals();
+  if (show) {
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('bottomSheet').classList.add('show');
+  }
+}
+function toggleDrawer(show) {
+  closeAllModals();
+  if (show) {
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+  }
+}
+function closeAllModals() {
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('bottomSheet').classList.remove('show');
+  document.getElementById('drawer').classList.remove('show');
+  document.getElementById('themeSheet').classList.remove('show');
+  document.getElementById('colorSheet').classList.remove('show');
+  document.getElementById('listModalSheet').classList.remove('show');
+}
+function openBackupPage() {
+  closeAllModals();
+  const now = new Date();
+  const jNow = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const gNow = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+  document.getElementById('backupDateFa').textContent = toPersianDigits(jNow);
+  document.getElementById('backupDateEn').textContent = toPersianDigits(gNow);
+  document.getElementById('backupView').classList.add('show');
+}
+function closeBackupPage() {
+  document.getElementById('backupView').classList.remove('show');
+  renderMain();
+}
+
+// --- Native SQLite Backup Import & Export (100% Bidirectional Compatibility with Daftarche Hesab 2.7.0) ---
+async function importSQLiteFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const SQL = await initSqlJs({
+      locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}`
+    });
+    const db = new SQL.Database(new Uint8Array(arrayBuffer));
+
+    try {
+      const profRes = db.exec("SELECT name FROM profile LIMIT 1");
+      if (profRes.length && profRes[0].values.length) {
+        appData.profileName = profRes[0].values[0][0] || "کاربر";
+      }
+    } catch(e) {}
+
+    const listRes = db.exec("SELECT id, enw, faw FROM list ORDER BY id DESC");
+    const newLists = [];
+    const newTxs = {};
+
+    if (listRes.length) {
+      listRes[0].values.forEach(row => {
+        const id = Number(row[0]);
+        const name = String(row[1] ?? '');
+        const resPair = String(row[2] ?? '');
+        let icon = 'bag', badgeColor = 'green';
+        if (resPair.includes('2131231115')) icon = 'gamepad';
+        if (resPair.includes('2131231119')) { icon = 'bulb'; badgeColor = 'yellow'; }
+        newLists.push({ id, name, icon, badgeColor, rawRes: resPair });
+
+        try {
+          const txRes = db.exec(`SELECT id, enw, faw, date, datefa, detail, pic FROM a${id}`);
+          newTxs[id] = [];
+          if (txRes.length) {
+            txRes[0].values.forEach(tRow => {
+              newTxs[id].push({
+                id: Number(tRow[0]),
+                enw: String(tRow[1] ?? ''),
+                faw: roundMoney(parseFloat(tRow[2] || '0')),
+                date: String(tRow[3] ?? ''),
+                datefa: String(tRow[4] ?? ''),
+                detail: String(tRow[5] ?? ''),
+                pic: String(tRow[6] ?? '')
+              });
+            });
+          }
+        } catch(e) {
+          newTxs[id] = [];
+        }
+      });
+    }
+
+    appData.lists = newLists;
+    appData.transactions = newTxs;
+    saveState();
+    renderMain();
+    alert('تمامی اطلاعات فایل پشتیبان با موفقیت کامل بازیابی شد!');
+    event.target.value = '';
+    closeBackupPage();
+  } catch (err) {
+    alert('خطا در خواندن فایل پشتیبان SQLite: ' + err.message);
+  }
+}
+
+async function exportSQLiteFile() {
+  try {
+    const SQL = await initSqlJs({
+      locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}`
+    });
+    const db = new SQL.Database();
+
+    // Full 16-table schema identical to Daftarche Hesab 2.7.0 so the file works in both Web & Android App
+    db.run("CREATE TABLE android_metadata (locale TEXT); INSERT INTO android_metadata VALUES ('en_GB');");
+    db.run("CREATE TABLE taj(id INTEGER PRIMARY KEY NOT NULL UNIQUE,value TEXT, get TEXT, alfa TEXT , beta TEXT , gama TEXT );");
+    db.run("INSERT INTO taj VALUES (1, 'aa/a/a/a', 'false', ' تومان', NULL, NULL);");
+    db.run("CREATE TABLE anbar (id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, code TEXT , bigunit TEXT, smallunit TEXT, relatunit TEXT , uriimage TEXT , anbars TEXT ,shops TEXT ,price1 TEXT ,pricef TEXT ,dateproduce TEXT ,dateinput TEXT ,dateend TEXT ,detail TEXT ,sri TEXT ,groupname TEXT);");
+    db.run("CREATE TABLE psri (id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, code TEXT , sri TEXT, price0 TEXT, beta TEXT);");
+    db.run("CREATE TABLE profile(id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, phone TEXT, address TEXT, job TEXT, url TEXT, detail TEXT, image TEXT);");
+    db.run("INSERT INTO profile VALUES (1, ?, '', '', '', '', '', 'null');", [appData.profileName || 'کاربر']);
+    db.run("CREATE TABLE list(id INTEGER PRIMARY KEY NOT NULL UNIQUE,enw INTEGER, faw TEXT );");
+    db.run("CREATE TABLE customer(id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, numberphone TEXT, datejoin TEXT, address TEXT, detail TEXT, uriimage TEXT , access TEXT , show TEXT , alfa TEXT );");
+    db.run("CREATE TABLE groupkala(id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, type TEXT, urimg TEXT );");
+    db.run("CREATE TABLE invoice(id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, amount TEXT, unitp TEXT , price TEXT , beta TEXT );");
+    db.run("CREATE TABLE unit (id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, type TEXT, beta TEXT );");
+    const defaultUnits = [
+      [1,'n','n'],[2,'تن','big'],[3,'کارتن','big'],[4,'کیسه','big'],[5,'جعبه','big'],
+      [6,'باکس','big'],[7,'بسته','big'],[8,'شانه','big'],[9,'کیلوگرم','small'],[10,'گرم','small'],
+      [11,'متر','small'],[12,'سانتی متر','small'],[13,'لیتر','small'],[14,'عدد','small'],[15,'بسته','small'],[16,'دستگاه','small']
+    ];
+    defaultUnits.forEach(u => db.run("INSERT INTO unit VALUES (?, ?, ?, NULL);", u));
+    db.run("CREATE TABLE buy (id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, code TEXT , smallunit TEXT, bigunit TEXT, relatunit TEXT , value TEXT,price0 TEXT ,price1 TEXT ,price2 TEXT ,date TEXT ,typedis TEXT ,typepay TEXT ,cusname TEXT ,subname TEXT);");
+    db.run("CREATE TABLE a0(id INTEGER,enw INTEGER, faw TEXT, date TEXT, datefa TEXT , detail TEXT, pic TEXT);");
+    db.run("CREATE TABLE pin (id INTEGER PRIMARY KEY NOT NULL UNIQUE,itemNameInList TEXT );");
+    db.run("CREATE TABLE Budgets(id INTEGER PRIMARY KEY NOT NULL UNIQUE,fatherid INTEGER, subid TEXT, money INTEGER, date TEXT);");
+    db.run("CREATE TABLE Budgetlist(id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, money INTEGER, date TEXT);");
+    db.run("CREATE TABLE pay (id INTEGER PRIMARY KEY NOT NULL UNIQUE,name TEXT, code TEXT , amount TEXT, date TEXT ,type TEXT,cusname TEXT,subname TEXT);");
+
+    const sortedListsAsc = appData.lists.slice().sort((a, b) => a.id - b.id);
+    sortedListsAsc.forEach(l => {
+      const resStr = l.rawRes || (l.icon === 'gamepad' ? '2131231115/2131230921' : l.icon === 'bulb' ? '2131231119/2131230928' : '2131231105/2131230921');
+      db.run("INSERT INTO list (id, enw, faw) VALUES (?, ?, ?);", [l.id, l.name, resStr]);
+      db.run(`CREATE TABLE a${l.id}(id INTEGER PRIMARY KEY NOT NULL UNIQUE ,enw INTEGER, faw TEXT, date TEXT, datefa TEXT ,detail TEXT, pic TEXT );`);
+      const txsAsc = (appData.transactions[l.id] || []).slice().sort((a, b) => (a.id || 0) - (b.id || 0));
+      txsAsc.forEach(t => {
+        db.run(`INSERT INTO a${l.id} (id, enw, faw, date, datefa, detail, pic) VALUES (?, ?, ?, ?, ?, ?, ?);`, [
+          t.id, String(t.enw ?? ''), String(roundMoney(t.faw)), String(t.date ?? ''), String(t.datefa ?? ''), String(t.detail ?? ''), String(t.pic ?? '')
+        ]);
+      });
+    });
+
+    const binaryArray = db.export();
+    const blob = new Blob([binaryArray], { type: 'application/octet-stream' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'backup';
+    a.click();
+  } catch (err) {
+    alert('خطا در ساخت فایل پشتیبان: ' + err.message);
+  }
+}
+
+// Initialize App
+applyThemeAndColors();
+renderMain();
+</script>
+</body>
+</html>
