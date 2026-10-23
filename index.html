@@ -4,8 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0b3833" id="metaThemeColor">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4b0.png">
+<link rel="apple-touch-icon" href="https://wsrv.nl/?url=cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4b0.png&w=192&h=192&output=png">
 <title>دفترچه حساب</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
 <style>
@@ -774,6 +778,9 @@
       <span class="app-title">دفترچه حساب</span>
     </div>
     <div class="app-bar-left">
+      <button class="icon-btn" id="topInstallBtn" style="display:none;color:#4ade80" onclick="installPWA()" title="نصب برنامه">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
       <button class="icon-btn" onclick="openThemeModal()" title="تغییر تم">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
       </button>
@@ -914,6 +921,10 @@
       </div>
     </div>
     <div class="drawer-menu">
+      <div class="drawer-item" id="drawerInstallBtn" style="display:none;color:#15803d;background:#f0fdf4" onclick="installPWA()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>نصب اپلیکیشن روی گوشی</span>
+      </div>
       <div class="drawer-item" onclick="openBackupPage()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c3d42" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
         <span>نسخه پشتیبان</span>
@@ -1049,6 +1060,32 @@
   </section>
 
 <script>
+// --- Service Worker & PWA Install Handler ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('topInstallBtn').style.display = 'flex';
+  document.getElementById('drawerInstallBtn').style.display = 'flex';
+});
+
+async function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('topInstallBtn').style.display = 'none';
+    document.getElementById('drawerInstallBtn').style.display = 'none';
+  }
+  deferredPrompt = null;
+}
+
 const INITIAL_DATA = {"version": 2, "profileName": "کاربر", "lists": [], "transactions": {}};
 
 let savedRaw = localStorage.getItem('hesab_app_data_clean');
@@ -1389,7 +1426,6 @@ function renderMain() {
   const grid = document.getElementById('listsGrid');
   grid.innerHTML = '';
 
-  // Sort lists by id DESC (so newest is first, matching Android app)
   const sortedLists = appData.lists.slice().sort((a, b) => b.id - a.id);
 
   if (sortedLists.length === 0) {
