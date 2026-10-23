@@ -51,7 +51,6 @@
     user-select: none;
     transition: background-color 0.25s ease, color 0.25s ease;
   }
-  /* Header */
   .app-bar {
     background-color: var(--bg-header);
     height: 56px;
@@ -90,7 +89,6 @@
   .icon-btn:active {
     background: rgba(255,255,255,0.12);
   }
-  /* Single Tab Header */
   .tab-bar {
     background-color: var(--bg-header);
     display: flex;
@@ -107,7 +105,6 @@
     font-size: 15px;
     border-bottom: 3px solid var(--accent);
   }
-  /* Daily Summary Box */
   .summary-card {
     background-color: var(--summary-bg);
     margin: 10px 8px;
@@ -163,7 +160,6 @@
   .s-box-val { font-size: 13.5px; font-weight: bold; direction: ltr; margin: 4px 0; word-break: break-all; }
   .s-box-unit { font-size: 11px; text-align: right; opacity: 0.85; }
 
-  /* Grid of Lists (LTR grid placement to match Android RecyclerView 3-col layout) */
   .lists-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -246,7 +242,6 @@
   .list-balance.pos { background-color: var(--pos-pill); }
   .list-balance.neg { background-color: var(--neg-pill); }
 
-  /* FAB */
   .fab {
     position: fixed;
     bottom: 24px;
@@ -267,7 +262,6 @@
   }
   .fab:active { transform: scale(0.92); }
 
-  /* Overlays & Modals */
   .overlay {
     position: fixed;
     inset: 0;
@@ -278,7 +272,6 @@
   }
   .overlay.show { display: block; }
 
-  /* Bottom Sheet & Modal Dialogs */
   .bottom-sheet {
     position: fixed;
     bottom: 0;
@@ -319,7 +312,6 @@
   }
   .bs-item:active { background: #f1f5f9; }
 
-  /* Theme & Color Customizer Grid */
   .theme-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -387,7 +379,6 @@
     cursor: pointer;
   }
 
-  /* Navigation Drawer */
   .drawer {
     position: fixed;
     top: 0;
@@ -444,7 +435,6 @@
   }
   .drawer-item:hover, .drawer-item:active { background: #e2e8f0; }
 
-  /* Full Screen Views */
   .page-view {
     position: fixed;
     inset: 0;
@@ -456,7 +446,6 @@
   }
   .page-view.show { display: flex; }
 
-  /* List Detail Header */
   .detail-header {
     background-color: var(--bg-header);
     padding: 12px 12px;
@@ -503,7 +492,6 @@
     color: var(--text-main);
   }
 
-  /* Transaction Items */
   .tx-list {
     padding: 10px 8px 95px;
     display: flex;
@@ -578,7 +566,6 @@
   }
   .tx-action-btn.del { color: #fca5a5; }
 
-  /* Form Page (Add/Edit Transaction) */
   .form-page {
     background-color: var(--form-bg);
     color: var(--form-text);
@@ -659,7 +646,6 @@
     box-shadow: 0 3px 8px rgba(0,0,0,0.2);
   }
 
-  /* Backup Page */
   .backup-card {
     background: #fff;
     color: #1e293b;
@@ -756,7 +742,6 @@
     background: #fff;
     color: #1e293b;
   }
-  /* Icon selector in List modal */
   .icon-picker-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -789,19 +774,15 @@
       <span class="app-title">دفترچه حساب</span>
     </div>
     <div class="app-bar-left">
-      <!-- دکمه تغییر تم (Theme Switcher) -->
       <button class="icon-btn" onclick="openThemeModal()" title="تغییر تم">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
       </button>
-      <!-- دکمه تغییر رنگ (Color Picker) -->
       <button class="icon-btn" onclick="openColorModal()" title="تغییر رنگ">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>
       </button>
-      <!-- دکمه جستجو -->
       <button class="icon-btn" onclick="toggleMainSearch()" title="جستجو">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
       </button>
-      <!-- دکمه تغییر حالت نمایش شبکه/لیست -->
       <button class="icon-btn" onclick="toggleGridMode()" title="تغییر نمایش">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
       </button>
@@ -1068,10 +1049,8 @@
   </section>
 
 <script>
-// --- 100% Complete Pre-loaded SQLite Backup Data (All 137 Records) ---
 const INITIAL_DATA = {"version": 2, "profileName": "کاربر", "lists": [], "transactions": {}};
 
-// Load from localStorage (upgrade automatically if old version without v2 flag)
 let savedRaw = localStorage.getItem('hesab_app_data_clean');
 let appData = savedRaw ? JSON.parse(savedRaw) : JSON.parse(JSON.stringify(INITIAL_DATA));
 
@@ -1164,7 +1143,6 @@ function applyThemeAndColors() {
   const meta = document.getElementById('metaThemeColor');
   if (meta) meta.setAttribute('content', merged.bgHeader);
 
-  // Sync color inputs if present
   const pAcc = document.getElementById('pickerAccent');
   if (pAcc) {
     pAcc.value = merged.accent;
@@ -1285,7 +1263,6 @@ function formatNumber(num) {
   return toPersianDigits(sign + parts.join('.'));
 }
 
-// Exact Mathematical Jalali <-> Gregorian Converter (0 Mismatches with SunDatePicker)
 function jalaliToGregorian(jy, jm, jd) {
   jy = parseInt(jy, 10) + 1595;
   jm = parseInt(jm, 10);
@@ -1411,12 +1388,13 @@ function renderMain() {
   const searchQ = (document.getElementById('mainSearchInput').value || '').trim().toLowerCase();
   const grid = document.getElementById('listsGrid');
   grid.innerHTML = '';
-  if (sortedLists.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1;direction:rtl;text-align:center;padding:36px 16px;background:rgba(255,255,255,0.08);border-radius:12px;color:var(--text-header);font-size:14px;line-height:1.9;">هیچ لیستی موجود نیست.<br>از منوی بالا (☰ &larr; <b>نسخه پشتیبان</b>) فایل <b>backup</b> خود را بازیابی کنید یا با دکمه پایین صفحه لیست جدید بسازید.</div>';
-  }
 
   // Sort lists by id DESC (so newest is first, matching Android app)
   const sortedLists = appData.lists.slice().sort((a, b) => b.id - a.id);
+
+  if (sortedLists.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;direction:rtl;text-align:center;padding:36px 16px;background:rgba(255,255,255,0.08);border-radius:12px;color:var(--text-header);font-size:14px;line-height:1.9;">هیچ لیستی موجود نیست.<br>از منوی بالا (☰ &larr; <b>نسخه پشتیبان</b>) فایل <b>backup</b> خود را بازیابی کنید یا با دکمه پایین صفحه لیست جدید بسازید.</div>';
+  }
 
   sortedLists.forEach(list => {
     const txs = appData.transactions[list.id] || [];
@@ -1501,7 +1479,6 @@ function renderListDetail() {
   document.getElementById('detailIconCircle').innerHTML = getIconSvg(list.icon).replace('class="list-icon"', 'width="30" height="30" stroke="#111" fill="none"');
 
   const rawTxs = appData.transactions[list.id] || [];
-  // Sort transactions by Date DESC, then ID DESC (matching original Android app)
   const txs = rawTxs.slice().sort((a, b) => {
     const kB = getDateSortKey(b.datefa, b.date);
     const kA = getDateSortKey(a.datefa, a.date);
@@ -1829,7 +1806,7 @@ function closeBackupPage() {
   renderMain();
 }
 
-// --- Native SQLite Backup Import & Export (100% Bidirectional Compatibility with Daftarche Hesab 2.7.0) ---
+// --- Native SQLite Backup Import & Export ---
 async function importSQLiteFile(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1902,7 +1879,6 @@ async function exportSQLiteFile() {
     });
     const db = new SQL.Database();
 
-    // Full 16-table schema identical to Daftarche Hesab 2.7.0 so the file works in both Web & Android App
     db.run("CREATE TABLE android_metadata (locale TEXT); INSERT INTO android_metadata VALUES ('en_GB');");
     db.run("CREATE TABLE taj(id INTEGER PRIMARY KEY NOT NULL UNIQUE,value TEXT, get TEXT, alfa TEXT , beta TEXT , gama TEXT );");
     db.run("INSERT INTO taj VALUES (1, 'aa/a/a/a', 'false', ' تومان', NULL, NULL);");
